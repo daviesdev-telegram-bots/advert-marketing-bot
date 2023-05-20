@@ -5,6 +5,8 @@ sub_sections = {"ad": [("indi", "Individual"), ("bm", "Business manager"), ("mm"
                 "mc": [("copy", "Copyrighter"), ("vo", "Voice over Artist")],
                 "me": [("na", "Not available for now")]}
 
+states = ['Nasarawa', 'Bauchi', 'Rivers', 'Oyo', 'Anambra', 'Delta', 'Benue', 'Yobe', 'Network', 'Plateau', 'Adamawa', 'Edo', 'Taraba', 'Borno', 'Kaduna', 'Sokoto', 'Ogun', 'Katsina', 'Kano', 'Abia', 'Akwa Ibom', 'Lagos', 'Enugu', 'Imo', 'Ekiti', 'Kogi', 'FCT Abuja', 'Jigawa', 'Syndication', 'Bayelsa', 'Ondo', 'Zamfara', 'Kebbi', 'Ebonyi', 'Gombe', 'Kwara', 'Osun', 'Cross River', 'Niger']
+states.sort()
 
 class Register():
     sec_kb = InlineKeyboardMarkup()
@@ -13,3 +15,18 @@ class Register():
     sec_kb.add(InlineKeyboardButton("Media expert", callback_data="reg_mode:me"))
     sec_kb.add(InlineKeyboardButton("Marketing consultant", callback_data="reg_mode:mc"))
 
+class Advertiser:
+    start_kb = InlineKeyboardMarkup()
+    start_kb.add(InlineKeyboardButton("Check Advert rates", callback_data="ad_rate"))
+    start_kb.add(InlineKeyboardButton("Run a media campaign", callback_data="media_camp"))
+    start_kb.add(InlineKeyboardButton("Send a media brief", callback_data="media_brief"))
+    start_kb.add(InlineKeyboardButton("Engage a media expert", callback_data="media_exp"))
+    start_kb.add(InlineKeyboardButton("Delete Account", callback_data="del"))
+
+    platforms_kb = InlineKeyboardMarkup()
+    platforms_kb.add(InlineKeyboardButton("Television", callback_data="tv_states"))
+    platforms_kb.add(InlineKeyboardButton("Radio", callback_data="state:radio"))
+    platforms_kb.add(InlineKeyboardButton("Billboard", callback_data="state:billboard"))
+    platforms_kb.add(InlineKeyboardButton("NewsPaper", callback_data="state:newspaper"))
+    platforms_kb.add(InlineKeyboardButton("Others", callback_data="state:other"))
+    

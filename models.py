@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Text, Integer, String
+from sqlalchemy import create_engine, Column, Text, Integer, String, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import dotenv, os
@@ -14,6 +14,15 @@ class User(base):
     phone = Column(String(20))
     section = Column(String(20), nullable=True, default=None)
     sub_section = Column(String(20), nullable=True, default=None)
+
+class Adrate(base):
+    __tablename__ = "adrate"
+    id = Column(Integer, primary_key=True)
+    station_name = Column(Text)
+    state = Column(Text)
+    duration = Column(Text)
+    card_rate = Column(Float)
+    # media_type = Column(String(20))
 
 engine = create_engine(os.getenv("DB_URL"))
 connection = engine.connect()
