@@ -13,6 +13,7 @@ class User(base):
     email = Column(Text)
     phone = Column(String(20))
     section = Column(String(20), nullable=True, default=None)
+    sub_section = Column(String(20), nullable=True, default=None)
 
 engine = create_engine(os.getenv("DB_URL"))
 connection = engine.connect()

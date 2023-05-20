@@ -2,7 +2,7 @@ from telebot import TeleBot
 from telebot.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 import os, dotenv
 from models import User, session
-
+from kb import *
 dotenv.load_dotenv()
 
 
@@ -16,7 +16,10 @@ def start(message):
         bot.send_message(message.chat.id, "Hello there. It seems you're not registered.\n\nPlease send your Email address")
         bot.register_next_step_handler(message, register_email)
         return
-    bot.send_message(message.chat.id, f"Welcome back {user.name}")
+    kb = InlineKeyboardMarkup().add(InlineKeyboardButton("Delete Account", callback_data="del"))
+    secs = {"ad": "Advertiser", "ms": "Media Sales", "mc": "Marketing consultant", "me": "Media expert"}
+    s = dict(sub_sections[user.section])[user.sub_section]
+    bot.send_message(message.chat.id, f"Welcome back {user.name}.\nHow may I help you today?.\n\n<b>Profile</b>\nEmail: {user.email}\nPhone: {user.phone}\nAccount Type: {secs[user.section]} • {s}", reply_markup=kb)
 
 def register_email(message):
     details = {}
@@ -31,12 +34,7 @@ def register_phone(message:Message, details):
         user = User(id=message.chat.id, name=message.chat.username, **details)
         session.add(user)
         session.commit()
-        kb = InlineKeyboardMarkup()
-        kb.add(InlineKeyboardButton("Advertiser", callback_data="reg_mode:ad"))
-        kb.add(InlineKeyboardButton("Media seller", callback_data="reg_mode:ms"))
-        kb.add(InlineKeyboardButton("Media expert", callback_data="reg_mode:me"))
-        kb.add(InlineKeyboardButton("Marketing consultant", callback_data="reg_mode:ms"))
-        bot.send_message(message.chat.id, "What best describes you?", reply_markup=kb)
+        bot.send_message(message.chat.id, "What best describes you?", reply_markup=Register.sec_kb)
 
 
 @bot.callback_query_handler(func=lambda call: call.data != None)
@@ -49,5 +47,22 @@ def callback_handler(callback: CallbackQuery):
         user.section = section
         session.commit()
         kb = InlineKeyboardMarkup()
-        bot.send_message(message.chat.id, "What category do you fall under?", reply_markup=kb)
+        for d, n in sub_sections[section]:
+            kb.add(InlineKeyboardButton(n, callback_data="sub_sec:"+d))
+        bot.edit_message_text("What category do you fall under?", message.chat.id, message.id, reply_markup=kb)
 
+    elif callback.data.startswith("sub_sec"):
+        _, sub_section = callback.data.split(":")
+        user = session.query(User).get(message.chat.id)
+        user.sub_section = sub_section
+        session.commit()
+        bot.edit_message_text("Successfully Registered✅",message.chat.id, message.id)
+        start(message)
+
+    elif callback.data == "del":
+        session.delete(session.query(User).get(message.chat.id))
+        session.commit()
+        bot.edit_message_text("Account deleted. Click /start to repeat the process", message.chat.id, message.id)
+
+print("Started")
+bot.infinity_polling()
