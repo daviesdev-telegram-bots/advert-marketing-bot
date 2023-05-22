@@ -1,7 +1,7 @@
 from telebot import TeleBot
 from telebot.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-import os, dotenv
-from models import User, session, Adrate
+import os, dotenv, re
+from models import User, session, MediaAdRate
 from kb import *
 dotenv.load_dotenv()
 
@@ -24,12 +24,22 @@ def start(message):
 def register_email(message):
     details = {}
     if message.text:
-        details["email"] = message.text
-        bot.send_message(message.chat.id, "Please send your phone number (07000000101)")
+        pattern = re.compile(r"^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$")
+        if not pattern.fullmatch(message.text.lower()):
+            bot.send_message(message.chat.id, "Please send a valid email address")
+            bot.register_next_step_handler(message, register_email)
+            return
+        details["email"] = message.text.lower()
+        bot.send_message(message.chat.id, "Please send your phone number (e.g 07000000101)")
         bot.register_next_step_handler(message, register_phone, details)
 
 def register_phone(message:Message, details):
     if message.text:
+        pattern = re.compile(r"0[789]{1}[0-9]{9}")
+        if not pattern.fullmatch(message.text):
+            bot.send_message(message.chat.id, "Please send a valid phone number (e.g 07000000101)")
+            bot.register_next_step_handler(message, register_phone)
+            return
         details["phone"] = message.text
         user = User(id=message.chat.id, name=message.chat.username, **details)
         session.add(user)
@@ -62,41 +72,43 @@ def callback_handler(callback: CallbackQuery):
     elif callback.data == "ad_rate":
         bot.edit_message_text("Ad rate for which platform?", message.chat.id, message.id, reply_markup=Advertiser.platforms_kb)
 
-    elif callback.data.startswith("tv_states"):
+    elif callback.data.startswith("state"):
+        _, media_type = callback.data.split(":")
         kb = InlineKeyboardMarkup()
         kb.add(InlineKeyboardButton("Any State", callback_data="tv_station:any"))
-        kb.add(*[InlineKeyboardButton(s, callback_data=f"tv_station:{s}") for s in states])
+        states = {"tv": tv_states, "radio": radio_states}
+        kb.add(*[InlineKeyboardButton(s, callback_data=f"station:{media_type}:{s}") for s in states[media_type]])
         bot.edit_message_text("Choose a state", message.chat.id, message.id, reply_markup=kb)
 
-    elif callback.data.startswith("tv_station"):
-        _, state = callback.data.split(":")
-        tv_stations = session.query(Adrate).filter_by(state=state).all()
+    elif callback.data.startswith("station"):
+        _, media_type, state = callback.data.split(":")
+        tv_stations = session.query(MediaAdRate).filter_by(state=state, media_type=media_type).all()
         station_names = set()
         for i in tv_stations:
             station_names.add(i.station_name)
         station_names = list(station_names)
         station_names.sort()
         tv_station_kb = InlineKeyboardMarkup(row_width=2)
-        tv_station_kb.add(*[InlineKeyboardButton(station, callback_data=f"tv_time:{state}:{station}") for station in station_names])
+        tv_station_kb.add(*[InlineKeyboardButton(station, callback_data=f"time:{media_type}:{state}:{station}") for station in station_names])
         bot.edit_message_text("What TV channel?", message.chat.id, message.id, reply_markup=tv_station_kb)
 
-    elif callback.data.startswith("tv_time"):
-        _, state, station_name = callback.data.split(":")
-        tv_stations = session.query(Adrate).filter_by(state=state, station_name=station_name).all()
+    elif callback.data.startswith("time"):
+        _, media_type, state, station_name = callback.data.split(":")
+        tv_stations = session.query(MediaAdRate).filter_by(state=state, station_name=station_name, media_type=media_type).all()
         durations = set()
         for station in tv_stations:
-            durations.add(station.duration)
+            durations.add(station.duration) 
         durations = list(durations)
         durations.sort()
         tv_time = InlineKeyboardMarkup(row_width=2)
-        tv_time.add(*[InlineKeyboardButton(dur, callback_data=f"tv_sum:{state}:{station_name}:{dur}") for dur in durations])
-        tv_time.add(InlineKeyboardButton("Any", callback_data=f"tv_sum:{state}:{station_name}:any"))
+        tv_time.add(*[InlineKeyboardButton(dur, callback_data=f"sum:{media_type}:{state}:{station_name}:{dur}") for dur in durations])
+        tv_time.add(InlineKeyboardButton("Any", callback_data=f"sum:{media_type}:{state}:{station_name}:any"))
         bot.edit_message_text("Choose a duration for the ad", message.chat.id, message.id, reply_markup=tv_time)
 
-    elif callback.data.startswith("tv_sum"):
-        _, state, station_name, dur = callback.data.split(":")
-        adrate = session.query(Adrate).filter_by(state=state, station_name=station_name, duration=dur).first()
-        bot.edit_message_text(f"<b>Summary</b>\nStation: {adrate.station_name}\nState: {adrate.state}\nDuration: {adrate.duration}\n\nPrice: <b>₦{adrate.card_rate}</b>", message.chat.id, message.id)
+    elif callback.data.startswith("sum"):
+        _, media_type, state, station_name, dur = callback.data.split(":")
+        adrate = session.query(MediaAdRate).filter_by(state=state, station_name=station_name, duration=dur, media_type=media_type).first()
+        bot.edit_message_text(f"<b>Summary</b>\n{media_type.title()} Station: {adrate.station_name}\nState: {adrate.state}\nDuration: {adrate.duration}\n\nPrice: <b>₦{adrate.card_rate}</b>", message.chat.id, message.id)
 
     elif callback.data == "del":
         session.delete(session.query(User).get(message.chat.id))

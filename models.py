@@ -15,14 +15,14 @@ class User(base):
     section = Column(String(20), nullable=True, default=None)
     sub_section = Column(String(20), nullable=True, default=None)
 
-class Adrate(base):
-    __tablename__ = "adrate"
+class MediaAdRate(base):
+    __tablename__ = "mediaadrate"
     id = Column(Integer, primary_key=True)
     station_name = Column(Text)
     state = Column(Text)
     duration = Column(Text)
     card_rate = Column(Float)
-    # media_type = Column(String(20))
+    media_type = Column(String(20))
 
 engine = create_engine(os.getenv("DB_URL"))
 connection = engine.connect()
