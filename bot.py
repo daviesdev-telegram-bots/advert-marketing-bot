@@ -18,7 +18,7 @@ def start(message):
         return
     # secs = {"ad": "Advertiser", "ms": "Media Sales", "mc": "Marketing consultant", "me": "Media expert"}
     # s = dict(sub_sections[user.section])[user.sub_section]
-    kb = {"ad": Advertiser.start_kb}
+    kb = {"ad": Advertiser.start_kb, "mm": MediaMarketer.start_kb}
     bot.send_message(message.chat.id, f"Welcome back {user.name}.\nHow may I help you today?.", reply_markup=kb[user.section])
 
 def register_email(message):
@@ -38,7 +38,7 @@ def register_phone(message:Message, details):
         pattern = re.compile(r"0[789]{1}[0-9]{9}")
         if not pattern.fullmatch(message.text):
             bot.send_message(message.chat.id, "Please send a valid phone number (e.g 07000000101)")
-            bot.register_next_step_handler(message, register_phone)
+            bot.register_next_step_handler(message, register_phone, details)
             return
         details["phone"] = message.text
         user = User(id=message.chat.id, name=message.chat.username, **details)
@@ -90,7 +90,11 @@ def callback_handler(callback: CallbackQuery):
         station_names.sort()
         tv_station_kb = InlineKeyboardMarkup(row_width=2)
         tv_station_kb.add(*[InlineKeyboardButton(station, callback_data=f"time:{media_type}:{state}:{station}") for station in station_names])
-        bot.edit_message_text("What TV channel?", message.chat.id, message.id, reply_markup=tv_station_kb)
+        if media_type == "tv":
+            text = "TV channel"
+        elif media_type == "radio":
+            text = "radio station"
+        bot.edit_message_text(f"What {text} ?", message.chat.id, message.id, reply_markup=tv_station_kb)
 
     elif callback.data.startswith("time"):
         _, media_type, state, station_name = callback.data.split(":")
@@ -116,4 +120,6 @@ def callback_handler(callback: CallbackQuery):
         bot.edit_message_text("Account deleted. Click /start to repeat the process", message.chat.id, message.id)
 
 print("Started")
+bot.load_next_step_handlers()
+bot.enable_save_next_step_handlers()
 bot.infinity_polling()
