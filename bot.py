@@ -1,7 +1,7 @@
 from telebot import TeleBot
 from telebot.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 import os, dotenv, re
-from models import User, session, MediaAdRate
+from models import User, session, MediaAdRate, MediaPlatform
 from kb import *
 dotenv.load_dotenv()
 
@@ -66,11 +66,41 @@ def callback_handler(callback: CallbackQuery):
         user = session.query(User).get(message.chat.id)
         user.sub_section = sub_section
         session.commit()
+        if user.section == "mm":
+            bot.edit_message_text("Select the media channels you manage", message.chat.id, message.id, reply_markup=Register.media_marketing_platform())
+            return
         bot.edit_message_text("Successfully Registered✅",message.chat.id, message.id)
         start(message)
     
+    elif callback.data.startswith("reg_mm_"):
+        data = callback.data[7:]
+        if data == "done":
+            bot.edit_message_text("Successfully Registered✅",message.chat.id, message.id)
+            start(message)
+            return
+        user = session.query(User).get(message.chat.id)
+        if data == "reset":
+            for i in user.media_platforms:
+                session.delete(i)
+            session.commit()
+            bot.edit_message_text("Select the media channels you manage", message.chat.id, message.id, reply_markup=Register.media_marketing_platform())
+            return
+        if not session.query(MediaPlatform).filter_by(user=user.id, platform=data).first():
+            session.add(MediaPlatform(platform=data, user=user.id))
+            session.commit()
+            txt = ", ".join([i.platform.title() for i in user.media_platforms])
+            bot.edit_message_text(f"Select the media channels you manage\n\nAdded: {txt}", message.chat.id, message.id,
+                                reply_markup=Register.media_marketing_platform().add(InlineKeyboardButton("Done ✅", callback_data="reg_mm_done"), InlineKeyboardButton("Reset ❌", callback_data="reg_mm_reset")))
+
     elif callback.data == "ad_rate":
         bot.edit_message_text("Ad rate for which platform?", message.chat.id, message.id, reply_markup=Advertiser.platforms_kb)
+    
+    elif callback.data == "media_campaign":
+        bot.edit_message_text("Send an email to campaigns@awari.com ", message.chat.id, message.id, reply_markup=InlineKeyboardMarkup().add(Advertiser.back_btn("ad_rate")))
+    elif callback.data == "media_brief":
+        bot.edit_message_text("Send an email to briefs@awari.com ", message.chat.id, message.id, reply_markup=InlineKeyboardMarkup().add(Advertiser.back_btn("ad_rate")))
+    elif callback.data == "media_expert":
+        bot.edit_message_text("Send an email to expert@awari.com ", message.chat.id, message.id, reply_markup=InlineKeyboardMarkup().add(Advertiser.back_btn("ad_rate")))
 
     elif callback.data.startswith("state"):
         _, media_type = callback.data.split(":")
@@ -120,6 +150,4 @@ def callback_handler(callback: CallbackQuery):
         bot.edit_message_text("Account deleted. Click /start to repeat the process", message.chat.id, message.id)
 
 print("Started")
-bot.load_next_step_handlers()
-bot.enable_save_next_step_handlers()
 bot.infinity_polling()

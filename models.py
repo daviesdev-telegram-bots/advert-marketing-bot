@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine, Column, Text, Integer, String, Float
+from sqlalchemy import create_engine, Column, Text, Integer, String, Float, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 import dotenv, os
 dotenv.load_dotenv()
 
@@ -14,6 +14,13 @@ class User(base):
     phone = Column(String(20))
     section = Column(String(20), nullable=True, default=None)
     sub_section = Column(String(20), nullable=True, default=None)
+    media_platforms = relationship("MediaPlatform")
+
+class MediaPlatform(base):
+    __tablename__ = "mediaplatform"
+    id = Column(Integer, primary_key=True)
+    platform = Column(String(30))
+    user = Column(Integer, ForeignKey("user.id"))
 
 class MediaAdRate(base):
     __tablename__ = "mediaadrate"
